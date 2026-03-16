@@ -21,8 +21,9 @@ def fetch_documents(dir_path: str | Path | None) -> list[Document]:
         list[Document]: _description_
     """
     if not dir_path:
-        # Default path
-        knowledge_base_path = str(Path(__file__).parent.parent / "knowledge_base")
+        dir_path = Path(__file__).parent.parent
+
+    knowledge_base_path = str(Path(dir_path) / "knowledge_base")
     logger.info("Attempting to fetch data from directory %s" % dir_path)
     folders = glob.glob(str(Path(knowledge_base_path) / "*"))
     documents = []
@@ -53,7 +54,7 @@ def create_chunks(documents: list[Document]) -> list[Document]:
     return chunks
 
 
-def create_vector_database(chunks: list[Document]) -> Chroma:
+def create_vector_database(chunks: list[Document], db_name: str|None = None) -> Chroma:
     """Create vector datasetore in location defined by DB_NAME environment variable.
 
     Args:
@@ -61,8 +62,9 @@ def create_vector_database(chunks: list[Document]) -> Chroma:
 
     Returns:
         Chroma: vector database
-    """    
-    db_name = os.environ["db_name"]
+    """
+    if not db_name:
+        db_name = os.environ.get("db_name", "knowledge_db")
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     if os.path.exists(db_name):
         Chroma(persist_directory=db_name, embedding_function=embeddings).delete_collection()
@@ -70,17 +72,17 @@ def create_vector_database(chunks: list[Document]) -> Chroma:
     
     logger.info("Creating new database in %s" % db_name)
 
-    vectorstore = Chroma.from_documents(
+    vectordb = Chroma.from_documents(
         documents=chunks, embedding=embeddings, persist_directory=db_name
     )
 
-    collection = vectorstore._collection
+    collection = vectordb._collection
     count = collection.count()
 
     sample_embedding = collection.get(limit=1, include=["embeddings"])["embeddings"][0]
     dimensions = len(sample_embedding)
     logger.info(f"Created database with %i %i-dimension vectors." % (count, dimensions))
-    return vectorstore
+    return vectordb
 
 
 if __name__ == "__main__":

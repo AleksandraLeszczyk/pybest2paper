@@ -15,5 +15,4 @@ pdfminer.six
 pi_heif
 pdf2image
 unstructured_pytesseract
-poppler
 sentence-transformers

@@ -1,18 +1,11 @@
 import os
-import logging
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.tools import tool
 from langchain.agents import create_agent
-from langchain.agents.middleware import wrap_model_call, ModelRequest, ModelResponse
 from langchain_openai import ChatOpenAI
-import os
-from langchain_openai import ChatOpenAI
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_core.messages import SystemMessage, HumanMessage, convert_to_messages
+from langchain_core.messages import SystemMessage 
 from langchain_core.documents import Document
 
 from dotenv import load_dotenv
@@ -32,15 +25,15 @@ DB_NAME = os.environ["DB_NAME"]
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vectordb = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
 retriever = vectordb.as_retriever()
-model_book_mole = ChatOpenAI(temperature=0, model_name=MODEL)
+model_literature_sage = ChatOpenAI(temperature=0, model_name=MODEL)
 
 @tool
 def search(query: str) -> str:
     """Search for information."""
     return format_docs(retriever.invoke(query, k=10))
 
-book_mole = create_agent(
-    model_book_mole,
+literature_sage = create_agent(
+    model_literature_sage,
     tools=[search],
     system_prompt=SystemMessage(
         content=[

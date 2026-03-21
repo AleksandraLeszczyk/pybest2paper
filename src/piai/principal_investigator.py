@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
-from .literature_sage import literature_sage
+from piai.literature_sage import literature_sage
 
 logger = logging.getLogger()
 load_dotenv(override=True)

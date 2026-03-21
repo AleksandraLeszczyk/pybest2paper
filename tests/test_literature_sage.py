@@ -1,6 +1,6 @@
 import logging
 from langchain_core.messages import HumanMessage, AIMessage
-from app.literature_sage import literature_sage
+from piai.literature_sage import literature_sage
 
 logger = logging.getLogger()
 

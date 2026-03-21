@@ -2,7 +2,7 @@
 import logging
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from app.knowledge_db_setup import fetch_documents, create_chunks, create_vector_database
+from piai.knowledge_db_setup import fetch_documents, create_chunks, create_vector_database
 
 logger = logging.getLogger()
 

@@ -22,46 +22,58 @@ You finish your analysis with conclusion. Don't suggest further investigation - 
 You coordinate a group of experts.
 You can assign tasks for a group of experts using tools. This is a list of experts:
 
-literature_sage - has an access to knowledge base. Finds relevant publications, and based on his findings, writes a summary of past research and suggest computation methodology for a current research task.
-code_mage - specialized in writing scripts that run calculations. Has ability to run calculations.
-calculation_analyst - interprets output of calculations. Can instruct calculation_runner to run calculations again with changes if there is a problem. Writes summary and conclusions of the experiment of the output looks correctly.
-writer - converges past research and calculation results into a paper, write conclusions, introduction, and abstract.
+**LiteratureSage**
+  - best for establishing foundation and planning,
+  - has an access to knowledge base,
+  - finds relevant publications, and based on his findings, writes a summary of past research and provides known molecular properties and geometries,
+  - suggest computation methodology for a current research task but does not know tools that are available now.
 
-With this board of experts, your job include:
-Create plan for research project. If you are not sure if your idea for a task is feasible, you can ask any expert if he can perform it and if he has any suggestions.
-Assign tasks for experts. Review results of each task before you do next step. If the results are not satisfying, you modify task and assign a task once again with modified requirements.
+**CalculationMage**
+ - makes calculations and provides actual results using PyBEST quantum chemistry library,
+ - knows available computational tools and libraries best,
+ - returns code and its output analysis.
+
+Your job is:
+1. Create step-by-step plan for research project. If you are not sure if your idea for a task is feasible, you can ask any expert if he can perform it and if he has any suggestions.
+2. Assign tasks for experts. Review results of each task before you do next step. If the results are not satisfying, you modify task and assign a task once again with modified requirements.
+3. Write all the assumptions and reasoning that you make as you go with research project.
+4a. If calculations were performed successfuly: Prepare a final answer that has a structure of scientific publication that contains abstract, introduction, theory, computational details, results, conclusions, and references.
+4b. If calculations were not performed successfully: Prepare a final answer that contains project description, research plan, theoretical background, necessary code snippets and list of further requirements to progress.
+
 Never answer with question.
 Good luck! Here is a research project you are assigned with:
 """
 
 
 @tool
-def ask_literature_sage(query: str) -> dict:
+def LiteratureSage(question: str) -> dict:
     """Search for information."""
-    logger.info("Asking Literature Sage: %s" % query)
+    logger.info("Asking Literature Sage: %s" % question)
     return literature_sage.invoke(
-        {"messages": [HumanMessage(query)]}
+        {"messages": [HumanMessage(question)]}
     )["messages"][-1].content
 
 
 @tool
-def ask_code_mage(query: str) -> str:
+def CalculationMage(question: str) -> str:
+    """Write and execute code."""
+    logger.info("Asking Code Mage: %s" % question)
+    return literature_sage.invoke(
+        {"messages": [HumanMessage(question)]}
+    )["messages"][-1].content
+
+
+@tool
+def ask_calculation_analyst(question: str) -> str:
     """Search for information."""
-    logger.info("Asking Code Mage: %s" % query)
+    logger.info("Asking Calculation Analyst: %s" % question)
     raise NotImplementedError
 
 
 @tool
-def ask_calculation_analyst(query: str) -> str:
+def ask_writer(question: str) -> str:
     """Search for information."""
-    logger.info("Asking Calculation Analyst: %s" % query)
-    raise NotImplementedError
-
-
-@tool
-def ask_writer(query: str) -> str:
-    """Search for information."""
-    logger.info("Asking Writer: %s" % query)
+    logger.info("Asking Writer: %s" % question)
     raise NotImplementedError
 
 
@@ -71,8 +83,8 @@ model_principal_investigator = ChatOpenAI(
 principal_investigator = create_agent(
     model_principal_investigator,
     tools=[
-        ask_literature_sage,
-        # ask_calculation_analyst, ask_calculation_runner, ask_writer
+        LiteratureSage,
+        CalculationMage,
     ],
     system_prompt=SystemMessage(
         content=[
@@ -82,11 +94,12 @@ principal_investigator = create_agent(
             }
         ]
     ),
+    debug=True,
 )
 
 
 def format_context(context: list[str | Document]):
-    result = "<h2 style='color: #ff7800;'>Relevant Context</h2>\n\n"
+    result = ""
     for doc in context:
         result += (
             f"<span style='color: #ff7800;'>Source: {doc.metadata['source']}</span>\n\n"
@@ -95,44 +108,96 @@ def format_context(context: list[str | Document]):
     return result
 
 
+# def chat_with_principal_investigator(history: list[dict]):
+#     """
+#     Generator function that streams agent events to the Gradio UI.
+#     Yields: (updated_history, event_markdown_string)
+#     """
+#     last_message_content = history[-1]["content"]
+    
+#     if isinstance(last_message_content, list):
+#         last_text = last_message_content[0]["text"]
+#     else:
+#         last_text = last_message_content
+
+#     # Initialize accumulation strings
+#     event_accumulator = "### 🔬 Research Progress\n"
+#     full_answer = ""
+
+#     # We use .stream to get chunks of the agent's execution
+#     # Ensure your 'principal_investigator' agent supports streaming
+#     for chunk in principal_investigator.stream(
+#         {"messages": [HumanMessage(content=last_text)]},
+#         stream_mode="values" # or "updates" depending on your Graph configuration
+#     ):
+#         # 1. Update the Event Log (Right Panel)
+#         # We parse the chunk to see what the agent is currently doing
+#         new_event_text = parse_event_to_markdown(chunk["messages"][-1])
+#         event_accumulator += f"\n{new_event_text}"
+        
+#         # 2. Update the Final Answer (if available in the current chunk)
+#         if "messages" in chunk:
+#             last_msg = chunk["messages"][-1]
+#             if isinstance(last_msg, AIMessage):
+#                 full_answer = last_msg.content
+
+#         # Yield current state to the UI to create the "real-time" effect
+#         # We temporarily append the partial answer to a copy of history
+#         temp_history = history + [{"role": "assistant", "content": full_answer}]
+#         yield temp_history, event_accumulator
+
+#     # Final yield to ensure everything is locked in
+#     history.append({"role": "assistant", "content": full_answer})
+#     yield history, event_accumulator
+
+
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
 def chat_with_principal_investigator(history: list[dict]):
     """
     Generator function that streams agent events to the Gradio UI.
     Yields: (updated_history, event_markdown_string)
     """
-    last_message_content = history[-1]["content"]
-    
-    if isinstance(last_message_content, list):
-        last_text = last_message_content[0]["text"]
-    else:
-        last_text = last_message_content
+    # Convert full Gradio history to LangChain messages
+    langchain_messages = []
+    for msg in history:
+        content = msg["content"]
+        # Handle multimodal content (list with text/files)
+        if isinstance(content, list):
+            text = content[0]["text"]
+        else:
+            text = content
+
+        if msg["role"] == "user":
+            langchain_messages.append(HumanMessage(content=text))
+        elif msg["role"] == "assistant":
+            langchain_messages.append(AIMessage(content=text))
+        elif msg["role"] == "system":
+            langchain_messages.append(SystemMessage(content=text))
 
     # Initialize accumulation strings
     event_accumulator = "### 🔬 Research Progress\n"
     full_answer = ""
 
-    # We use .stream to get chunks of the agent's execution
-    # Ensure your 'principal_investigator' agent supports streaming
+    # Pass the full message history instead of just the last message
     for chunk in principal_investigator.stream(
-        {"messages": [HumanMessage(content=last_text)]},
-        stream_mode="values" # or "updates" depending on your Graph configuration
+        {"messages": langchain_messages},
+        stream_mode="values"
     ):
         # 1. Update the Event Log (Right Panel)
-        # We parse the chunk to see what the agent is currently doing
         new_event_text = parse_event_to_markdown(chunk["messages"][-1])
         event_accumulator += f"\n{new_event_text}"
-        
+
         # 2. Update the Final Answer (if available in the current chunk)
         if "messages" in chunk:
             last_msg = chunk["messages"][-1]
             if isinstance(last_msg, AIMessage):
                 full_answer = last_msg.content
 
-        # Yield current state to the UI to create the "real-time" effect
-        # We temporarily append the partial answer to a copy of history
+        # Yield current state to the UI
         temp_history = history + [{"role": "assistant", "content": full_answer}]
         yield temp_history, event_accumulator
 
-    # Final yield to ensure everything is locked in
+    # Final yield to lock in the result
     history.append({"role": "assistant", "content": full_answer})
     yield history, event_accumulator

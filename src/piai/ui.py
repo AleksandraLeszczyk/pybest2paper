@@ -13,7 +13,7 @@ def main():
     theme = gr.themes.Soft(font=["Inter", "system-ui", "sans-serif"])
 
     with gr.Blocks(title="Quantum Chemistry Lab", theme=theme) as ui:
-        gr.Markdown("# 🏢 QC Expert Assistant\nAsk me anything about Quantum Chemistry!")
+        gr.Markdown("# 🏢 Quantum Chemistry Lab")
 
         with gr.Row():
             with gr.Column(scale=1):

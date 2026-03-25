@@ -9,6 +9,7 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
 from piai.literature_sage import literature_sage
+from piai.calculation_mage import calculation_mage
 from piai.utils import parse_event_to_markdown
 
 logger = logging.getLogger()
@@ -55,26 +56,12 @@ def LiteratureSage(question: str) -> dict:
 
 
 @tool
-def CalculationMage(question: str) -> str:
+def CalculationMage(question: str) -> list[str]:
     """Write and execute code."""
     logger.info("Asking Code Mage: %s" % question)
-    return literature_sage.invoke(
+    return calculation_mage.invoke(
         {"messages": [HumanMessage(question)]}
-    )["messages"][-1].content
-
-
-@tool
-def ask_calculation_analyst(question: str) -> str:
-    """Search for information."""
-    logger.info("Asking Calculation Analyst: %s" % question)
-    raise NotImplementedError
-
-
-@tool
-def ask_writer(question: str) -> str:
-    """Search for information."""
-    logger.info("Asking Writer: %s" % question)
-    raise NotImplementedError
+    )["messages"][-1].content[-1]["text"]
 
 
 model_principal_investigator = ChatOpenAI(
@@ -87,12 +74,7 @@ principal_investigator = create_agent(
         CalculationMage,
     ],
     system_prompt=SystemMessage(
-        content=[
-            {
-                "type": "text",
-                "text": PI_PROMPT,
-            }
-        ]
+        content=[{ "type": "text", "text": PI_PROMPT}]
     ),
     debug=True,
 )
@@ -107,51 +89,6 @@ def format_context(context: list[str | Document]):
         result += doc.page_content + "\n\n"
     return result
 
-
-# def chat_with_principal_investigator(history: list[dict]):
-#     """
-#     Generator function that streams agent events to the Gradio UI.
-#     Yields: (updated_history, event_markdown_string)
-#     """
-#     last_message_content = history[-1]["content"]
-    
-#     if isinstance(last_message_content, list):
-#         last_text = last_message_content[0]["text"]
-#     else:
-#         last_text = last_message_content
-
-#     # Initialize accumulation strings
-#     event_accumulator = "### 🔬 Research Progress\n"
-#     full_answer = ""
-
-#     # We use .stream to get chunks of the agent's execution
-#     # Ensure your 'principal_investigator' agent supports streaming
-#     for chunk in principal_investigator.stream(
-#         {"messages": [HumanMessage(content=last_text)]},
-#         stream_mode="values" # or "updates" depending on your Graph configuration
-#     ):
-#         # 1. Update the Event Log (Right Panel)
-#         # We parse the chunk to see what the agent is currently doing
-#         new_event_text = parse_event_to_markdown(chunk["messages"][-1])
-#         event_accumulator += f"\n{new_event_text}"
-        
-#         # 2. Update the Final Answer (if available in the current chunk)
-#         if "messages" in chunk:
-#             last_msg = chunk["messages"][-1]
-#             if isinstance(last_msg, AIMessage):
-#                 full_answer = last_msg.content
-
-#         # Yield current state to the UI to create the "real-time" effect
-#         # We temporarily append the partial answer to a copy of history
-#         temp_history = history + [{"role": "assistant", "content": full_answer}]
-#         yield temp_history, event_accumulator
-
-#     # Final yield to ensure everything is locked in
-#     history.append({"role": "assistant", "content": full_answer})
-#     yield history, event_accumulator
-
-
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 def chat_with_principal_investigator(history: list[dict]):
     """

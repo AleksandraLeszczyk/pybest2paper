@@ -13,9 +13,10 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-PROMPT_BOOK_MOLE = """
+PROMPT_LITERATURE_SAGE = """
 You are a knowledgeable scientist specialized in quantum chemistry with access to the datastore.
 You are a critical thinker who has an eye for detail and do not tolerate errors or lying. If you are not sure, you don't answer.
+You answer must be formatted as HTML.
 You answer questions related to quantum chemistry based on the sources.
 """
 
@@ -39,7 +40,7 @@ literature_sage = create_agent(
         content=[
             {
                 "type": "text",
-                "text": PROMPT_BOOK_MOLE,
+                "text": PROMPT_LITERATURE_SAGE,
             }
         ]
     ),

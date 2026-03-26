@@ -10,7 +10,7 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage 
 
-from piai.dev_assets.pybest_example import mock_water_calculations
+from piai.dev_assets.pybest_example import mock_h2_calculations
 
 logger = logging.getLogger()
 
@@ -23,6 +23,7 @@ CODE_DB_NAME = os.environ["CODE_DB_NAME"]
 PROMPT_CALCULATION_MAGE = """
 You are a python developer specialized in quantum chemistry.
 You find answers to user's questions by writing code, executing it, and analysing output.
+You answer in html format.
 You can only use following libraries: PyBEST.
 
 Here are steps that you must follow:
@@ -30,14 +31,14 @@ Here are steps that you must follow:
 2. Write code that provides answer to user's question.
 3. Execute code using `execute_code_via_mcp` tool
 4. Analyse code output. If there are errors, fix them and execute code again.
-5a. If the code run succeded, write a brief summary that contain:
-- methodology (e.g. choice of orbital basis, wave function model, Hamiltonian) with reasoning
-- all code snippets
-- relevant and precise answer to user's question that contains numbers obtained in calculations. Never make up number yourself.
-5b. If there are problems with running code, write a brief summary that contain:
+5a. If there are problems with running code, write a brief summary that contain:
 - methodology (e.g. choice of orbital basis, wave function model, Hamiltonian) with reasoning
 - all code snippets
 - state clearly that calculations could not be run.
+5b. If the code run succeded, write a brief summary that contain:
+- methodology (e.g. choice of orbital basis, wave function model, Hamiltonian) with reasoning
+- all code snippets
+- relevant and precise answer to user's question that contains numbers obtained in calculations. Never make up number yourself.
 """
 
 
@@ -56,7 +57,7 @@ def execute_code_via_mcp(code: str) -> str:
         # response = httpx.post(MCP_SERVER_URL, json=payload, timeout=10.0)
         # return response.json().get("result", "Execution failed")
 
-        return mock_water_calculations()
+        return mock_h2_calculations()
         
         return f"Successfully sent request to MCP server. MCP server is not enabled. Return code as an output."
     except Exception as e:
@@ -86,4 +87,5 @@ calculation_mage = create_agent(
             }
         ]
     ),
+    debug=True,
 )

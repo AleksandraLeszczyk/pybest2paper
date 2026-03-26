@@ -26,9 +26,10 @@ def main():
                 )
 
             with gr.Column(scale=1):
-                event_markdown = gr.Markdown(
+                # event_markdown = gr.Markdown(
+                event_markdown = gr.HTML(
                     label="Research Project Progress",
-                    value="*Events will appear here*",
+                    value="Events will appear here",
                     container=True,
                     height=600,
                 )

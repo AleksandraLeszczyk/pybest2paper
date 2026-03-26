@@ -6,7 +6,8 @@ langchain-openai==1.1.12
 langchain-chroma==1.1.0
 langchain-community==0.4.1
 langchain-huggingface==1.2.1
-pybest==2.1.0
 openai==2.29.0
+plotly==6.6.0
+pybest==2.1.0
 tiktoken==0.12.0
 sentence-transformers==5.3.0

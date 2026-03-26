@@ -9,7 +9,7 @@ def test_literature_sage():
     messages = literature_sage.invoke(
         {"messages": [HumanMessage("When pCCD orbitals are better tha RHF orbitals?")]}
     )
-    logger.info("Book Mole answered: %s" % messages)
+    logger.info("Literature Sage answered: %s" % messages)
     answer = messages["messages"][-1]
     assert isinstance(answer, AIMessage)
     assert len(answer.content) > 1

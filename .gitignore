@@ -208,3 +208,7 @@ __marimo__/
 
 # Own
 artifacts*
+code_db/*
+knowledge_db/*
+pybest_example*
+uv.lock

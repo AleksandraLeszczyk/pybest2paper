@@ -47,7 +47,6 @@ literature_sage = create_agent(
 )
 
 def format_docs(context: list[str | Document]):
-    result = "<h2 style='color: #ff7800;'>Relevant Context</h2>\n\n"
     for doc in context:
         result += (
             f"<span style='color: #ff7800;'>Source: {doc.metadata['source']}</span>\n\n"

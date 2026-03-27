@@ -1,16 +1,18 @@
 import logging
 import os
 
+import html
+import json
 from langchain.tools import tool
 from langchain.agents import create_agent
-from langchain.messages import AIMessage, HumanMessage, SystemMessage
+from langchain.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
 from piai.literature_sage import literature_sage
 from piai.calculation_mage import calculation_mage
-from piai.utils import parse_event_to_markdown
+from piai.viz_creator import viz_creator
 
 logger = logging.getLogger()
 load_dotenv(override=True)
@@ -20,6 +22,7 @@ PI_PROMPT = """You are a principal investigator in a research project in area of
 You are a critical thinker who has an eye for detail and do not tolerate errors.
 You enjoy exploring new ideas but you always stick to facts and always inform if any thought is not supported by external source.
 You finish your analysis with conclusion. Don't suggest further investigation - just do it without user's prompt.
+Your goal is to study the research project by planning, collecting data, and making conclusions based on evidence.
 You coordinate a group of experts.
 You can assign tasks for a group of experts using tools. This is a list of experts:
 
@@ -34,6 +37,11 @@ You can assign tasks for a group of experts using tools. This is a list of exper
  - knows available computational tools and libraries best,
  - returns code and its output analysis.
 
+**VizCreator**
+ - creates plots and saves them to registry,
+ - requires numerical input data to plot with description of variables and purpose of figure,
+ - ask only after you obtain data from other experts.
+
 Your job is:
 1. Create step-by-step plan for research project. If you are not sure if your idea for a task is feasible, you can ask any expert if he can perform it and if he has any suggestions.
 2. Assign tasks for experts. Review results of each task before you do next step. If the results are not satisfying, you modify task and assign a task once again with modified requirements.
@@ -41,6 +49,7 @@ Your job is:
 4a. If calculations were performed successfuly: Prepare a final answer that has a structure of scientific publication that contains abstract, introduction, theory, computational details, results, conclusions, and references.
 4b. If calculations were not performed successfully: Prepare a final answer that contains project description, research plan, theoretical background, necessary code snippets and list of further requirements to progress.
 
+You answer mostly in markdown format and you can put latex enclosed by dollar signs.
 Never answer with question.
 Good luck! Here is a research project you are assigned with:
 """
@@ -61,7 +70,15 @@ def CalculationMage(question: str) -> list[str]:
     logger.info("Asking Code Mage: %s" % question)
     return calculation_mage.invoke(
         {"messages": [HumanMessage(question)]}
-    )["messages"][-1].content[-1]["text"]
+    )["messages"][-1].content
+
+@tool
+def VizCreator(question: str) -> list[str]:
+    """Creates interactive pictures and saves them to registry."""
+    logger.info("Asking VizCreator: %s" % question)
+    viz_creator.invoke(
+        {"messages": [HumanMessage(question)]}
+    )["messages"][-1].content
 
 
 model_principal_investigator = ChatOpenAI(
@@ -72,11 +89,11 @@ principal_investigator = create_agent(
     tools=[
         LiteratureSage,
         CalculationMage,
+        VizCreator,
     ],
     system_prompt=SystemMessage(
         content=[{ "type": "text", "text": PI_PROMPT}]
     ),
-    debug=True,
 )
 
 
@@ -90,7 +107,7 @@ def format_context(context: list[str | Document]):
     return result
 
 
-def chat_with_principal_investigator(history: list[dict]):
+def chat_with_principal_investigator(history: list[dict], research_progress: str = "🔬 Research Progress\n"):
     """
     Generator function that streams agent events to the Gradio UI.
     Yields: (updated_history, event_markdown_string)
@@ -113,7 +130,6 @@ def chat_with_principal_investigator(history: list[dict]):
             langchain_messages.append(SystemMessage(content=text))
 
     # Initialize accumulation strings
-    event_accumulator = "### 🔬 Research Progress\n"
     full_answer = ""
 
     # Pass the full message history instead of just the last message
@@ -122,8 +138,8 @@ def chat_with_principal_investigator(history: list[dict]):
         stream_mode="values"
     ):
         # 1. Update the Event Log (Right Panel)
-        new_event_text = parse_event_to_markdown(chunk["messages"][-1])
-        event_accumulator += f"\n{new_event_text}"
+        new_event_text = parse_event_to_html(chunk["messages"][-1])
+        research_progress += f"\n{new_event_text}"
 
         # 2. Update the Final Answer (if available in the current chunk)
         if "messages" in chunk:
@@ -133,8 +149,84 @@ def chat_with_principal_investigator(history: list[dict]):
 
         # Yield current state to the UI
         temp_history = history + [{"role": "assistant", "content": full_answer}]
-        yield temp_history, event_accumulator
+        yield temp_history, research_progress
 
     # Final yield to lock in the result
     history.append({"role": "assistant", "content": full_answer})
-    yield history, event_accumulator
+    yield history, research_progress
+
+
+## UTILS
+
+def parse_event_to_html(event: AIMessage | ToolMessage) -> str:
+    """
+    Parses a LangChain event to HTML with dark mode support and overflow protection.
+    """
+    content = getattr(event, 'content', '')
+    msg_type = type(event).__name__
+
+    # CSS for responsiveness and theme adaptation
+    style_header = """
+    <style>
+        .event-container { 
+            word-wrap: break-word; 
+            overflow-wrap: break-word; 
+            white-space: normal;
+            font-family: sans-serif;
+            margin-bottom: 15px;
+        }
+        .code-block {
+            white-space: pre-wrap; 
+            word-break: break-all;
+            background: rgba(0,0,0,0.05);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        @media (prefers-color-scheme: dark) {
+            .code-block { background: rgba(255,255,255,0.1); color: #e5e7eb; }
+            .tool-call { border-left-color: #60a5fa !important; }
+            .tool-response { background: #064e3b !important; border-color: #059669 !important; color: #ecfdf5; }
+        }
+    </style>
+    """
+
+    html_output = ""
+
+    if msg_type == "AIMessage":
+        tool_calls = getattr(event, 'tool_calls', [])
+        if tool_calls:
+            for tc in tool_calls:
+                name = html.escape(tc.get('name', 'unknown'))
+                args = html.escape(json.dumps(tc.get('args', {}), indent=2))
+                
+                html_output += (
+                    f'<div class="event-container tool-call" style="border-left: 4px solid #3b82f6; padding-left: 12px;">'
+                    f'<b>🛠️ Action: <code>{name}</code></b><br>'
+                    f'<b>Task:</b><pre class="code-block"><code>{args}</code></pre>'
+                    f'</div>'
+                )
+
+    elif msg_type == "ToolMessage":
+        # Escape the name for safety, but allow 'content' to render as raw HTML
+        name = html.escape(getattr(event, 'name', 'Expert'))
+        
+        if name == "VizCreator":
+            figures = [i for i in os.listdir("artifacts") if i.startswith("fig") and i.endswith("png")]
+
+            html_output = (
+                f'<div class="event-container tool-response" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; color: #166534;">'
+                f'<h4 style="margin: 0 0 8px 0;">🎨 Figure {len(figures)}</h4>'
+                f"<img src='/gradio_api/file/artifacts/{figures[-1]}' alt=''>"
+                f'</div>'
+            )
+
+        else:
+            html_output = (
+                f'<div class="event-container tool-response" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; color: #166534;">'
+                f'<h4 style="margin: 0 0 8px 0;">🧱 Expert <code>{name}</code> answers:</h4>'
+                f'<div style="line-height: 1.5;">{content}</div>'
+                f'</div>'
+            )
+
+    return f"{style_header}{html_output.strip()}" if html_output else ""

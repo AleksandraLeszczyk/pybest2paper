@@ -1,7 +1,6 @@
 import httpx
 import logging
 import os
-from pathlib import Path
 
 from langchain.tools import tool
 from langchain_chroma import Chroma
@@ -87,5 +86,4 @@ calculation_mage = create_agent(
             }
         ]
     ),
-    debug=True,
 )

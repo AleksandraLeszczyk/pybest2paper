@@ -1,3 +1,7 @@
+
+import os
+import shutil
+
 import gradio as gr
 from dotenv import load_dotenv
 
@@ -17,7 +21,6 @@ def main():
 
         with gr.Row():
             with gr.Column(scale=1):
-                # CRITICAL: Add type="messages" to support the dict format
                 chatbot = gr.Chatbot(label="💬 Lab") 
                 message = gr.Textbox(
                     label="Your Research Project",
@@ -26,8 +29,7 @@ def main():
                 )
 
             with gr.Column(scale=1):
-                # event_markdown = gr.Markdown(
-                event_markdown = gr.HTML(
+                event_html = gr.HTML(
                     label="Research Project Progress",
                     value="Events will appear here",
                     container=True,
@@ -40,11 +42,24 @@ def main():
             outputs=[message, chatbot],
         ).then(
             chat_with_principal_investigator, 
-            inputs=[chatbot], 
-            outputs=[chatbot, event_markdown]
+            inputs=[chatbot, event_html], 
+            outputs=[chatbot, event_html]
         )
 
-    ui.launch(inbrowser=True)
+    ui.launch(inbrowser=True, allowed_paths=[".", "artifacts"])
+
+
+def clean_artifacts():
+    if not os.path.exists("artifacts"):
+        os.mkdir("artifacts")
+    else:
+        # Move old artifacts
+        items = [i for i in os.listdir("artifacts")]
+        old_artifact_dirs = [i for i in os.listdir(".") if i.startswith("artifacts_")]
+        if items:
+            a = max([0] + [int(i.split("_")[-1]) for i in old_artifact_dirs])
+            shutil.move("artifacts", f"artifacts_{a+1}")
 
 if __name__ == "__main__":
+    clean_artifacts()
     main()

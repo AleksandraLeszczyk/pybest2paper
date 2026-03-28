@@ -7,7 +7,7 @@ This system automates the scientific workflow: from literature retrieval to live
 
 🤖 **Multi-Agent Orchestration** – Specialized AI agents (Researcher, Chemist, Visualizer) collaborate to break down and solve complex chemical problems.
 
-🔌 **Custom MCP Server** – Standardized, secure tool execution bridging LLMs with scientific engines (like PyBEST) for real-time DFT calculations.
+🔌 **Custom MCP Server** – Standardized, secure tool execution bridging LLMs with scientific engines (like PyBEST) for real-time electronic structure calculations.
 
 📚 **Scientific RAG** – High-precision Retrieval-Augmented Generation to ground LLM reasoning in verified datasets and chemical literature.
 

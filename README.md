@@ -26,11 +26,45 @@ This system automates the scientific workflow: from literature retrieval to live
 
 ## How to run
 
+1. Set up environemnt variables. Choose LLM models that you like most for each task. 
+This setup is mostly for simple testing, better models are recommended.
+
+```
+HF_TOKEN=
+OPENAI_API_KEY=
+DB_NAME=knowledge_db  # Name of directory for database with papers
+CODE_DB_NAME=code_db  # Name of directory for database for code snippets
+MODEL_EMBEDDING=all-MiniLM-L6-v2
+MODEL_KNOWLEDGE_SUMMARY=gpt-4.1-nano
+MODEL_CODE_WRITING=gpt-5.4-mini
+MODEL_PRINCIPAL_INVESTIGATOR=gpt-5.4-mini
+MODEL_VIZ_CREATOR=gpt-5.4-mini
+MCP_SERVER_URL=http://your-mcp-server:8080/execute  
+```
+
+2. Set up knowledge database
+
+Populate the directory knowledge_base/books and knowledge_base/articles with your collection and run:
+
+```python src/agentic_valence/scripts/knowledge_db_setup.py```
+
+3. Set up code database
+
+Populate the directory code_db with your libraries (e.g. PyBEST, PySCF, psi4) and run:
+```python src/agentic_valence/scripts/code_db_setup.py```
+
+
+4. Install
+
 MacOS and Linux
 ```
   uv venv --python 3.12 
   source .venv/bin/activate
-  uv pip install -r requirements.txt 
   uv pip install .
-  python src/piai/ui.py
+  python src/agentic_valence/ui.py
+```
+
+5. Run user interface
+```
+  python src/agentic_valence/ui.py
 ```

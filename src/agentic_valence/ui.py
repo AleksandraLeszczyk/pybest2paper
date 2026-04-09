@@ -5,7 +5,7 @@ import shutil
 import gradio as gr
 from dotenv import load_dotenv
 
-from principal_investigator import chat_with_principal_investigator
+from agentic_valence.agents.principal_investigator import chat_with_principal_investigator
 
 load_dotenv(override=True)
 
